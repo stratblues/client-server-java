@@ -25,14 +25,14 @@ public class Server extends Filter {
 				clientServerConfig = new ClientServerConfiguration(clientSocket);
 
 				// multiple client support
-				new Thread(() -> handleClient(clientServerConfig)).start();
+				new Thread(() -> processDataFromClient(clientServerConfig)).start();
 			}
 		} catch (IOException e) {
 			throw new RuntimeException("error: ", e);
 		}
 	}
 
-	private void handleClient(ClientServerConfiguration clientServerConfig) {
+	private void processDataFromClient(ClientServerConfiguration clientServerConfig) {
 		try {
 			readObjectsFromClient(clientServerConfig);
 			sendProcessedObjectsBackToClient(clientServerConfig);
@@ -41,10 +41,10 @@ public class Server extends Filter {
 		}
 	}
 
-	private void readObjectsFromClient(ClientServerConfiguration handler) {
+	private void readObjectsFromClient(ClientServerConfiguration clientServerConfig) {
 		try {
 			Message obj;
-			while ((obj = handler.receiveMessageObjectInputSteam()) != null) {
+			while ((obj = clientServerConfig.receiveMessageObjectInputSteam()) != null) {
 				if (obj.getIsFinished()) {
 					break;
 				} else {
@@ -58,17 +58,17 @@ public class Server extends Filter {
 		}
 	}
 
-	private void sendProcessedObjectsBackToClient(ClientServerConfiguration handler) {
+	private void sendProcessedObjectsBackToClient(ClientServerConfiguration clientServerConfig) {
 		try {
 			while (inPipe.isNotEmptyOrIsNotClosed()) {
 				while (inPipe.hasNext()) {
 					String processedLine = inPipe.read();
 					Message responseMessage = new Message(processedLine);
-					handler.sendMessageObjectOutputStream(responseMessage);
+					clientServerConfig.sendMessageObjectOutputStream(responseMessage);
 				}
 				Thread.sleep(100);
 			}
-			handler.sendMessageObjectOutputStream(new Message(true));
+			clientServerConfig.sendMessageObjectOutputStream(new Message(true));
 		} catch (IOException | InterruptedException e) {
 			throw new RuntimeException("Error sending to client: ", e);
 		}
