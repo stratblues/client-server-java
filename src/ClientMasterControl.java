@@ -1,30 +1,50 @@
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 public class ClientMasterControl implements Mediator {
 	private Client client;
-	private Socket clientSocket;
-	private ObjectOutputStream outputStream;
-	private ObjectInputStream inputStream;
+	private ClientServerConfiguration clientServerConfig;
 
 	public ClientMasterControl(String[] messages) throws IOException {
+		Socket clientSocket = new Socket("localhost", 5000);
 		this.client = new Client(this, messages);
-		this.clientSocket = new Socket("localhost", 5000);
-		this.outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-		this.inputStream = new ObjectInputStream(clientSocket.getInputStream());
+		this.clientServerConfig = new ClientServerConfiguration(clientSocket);
+
 	}
 
 	public static void main(String[] args) {
 		try {
-			String[] clientMessages = { "Descent of Man", "The Ascent of Man", "The Old Man and The Sea" };
-			ClientMasterControl mediator = new ClientMasterControl(clientMessages);
-			mediator.client.sendMessagesToServer();
-			mediator.listenForServerResponses();
+			String[] clientOneMessages = { "Descent of Man", "The Ascent of Man", "The Old Man and The Sea" };
+			String[] clientTwoMessages = { "first little blob ", "second one to test", "i love se575!" };
 
-		} catch (IOException error) {
+			ClientMasterControl mediator1 = new ClientMasterControl(clientOneMessages);
+			ClientMasterControl mediator2 = new ClientMasterControl(clientTwoMessages);
+
+			Thread clientOneThread = new Thread(() -> {
+				try {
+					mediator1.client.sendMessagesToServer();
+					mediator1.listenForServerResponses();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			});
+
+			Thread clientTwoThread = new Thread(() -> {
+				try {
+					mediator2.client.sendMessagesToServer();
+					mediator2.listenForServerResponses();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			});
+
+			clientOneThread.start();
+			clientTwoThread.start();
+			clientOneThread.join();
+			clientTwoThread.join();
+
+		} catch (IOException | InterruptedException error) {
 			error.printStackTrace();
 		}
 	}
@@ -33,11 +53,7 @@ public class ClientMasterControl implements Mediator {
 	@Override
 	public void sendMessage(Message message, Colleague colleague) {
 		try {
-			outputStream.writeObject(message);
-			outputStream.flush();
-			if (message.getIsFinished()) {
-				clientSocket.shutdownOutput();
-			}
+			clientServerConfig.sendMessage(message);
 		} catch (IOException error) {
 			throw new RuntimeException(error);
 		}
@@ -46,33 +62,26 @@ public class ClientMasterControl implements Mediator {
 	// get message back from server
 	@Override
 	public void receiveMessage(Message message, Colleague colleague) {
-		if (colleague instanceof Client) {
-			((Client) colleague).receive(message);
-		}
+		((Client) colleague).receive(message);
 	}
 
-	private void listenForServerResponses() throws IOException {
-		Object object;
+	private void listenForServerResponses() {
 		try {
-			while (true) {
-				object = inputStream.readObject();
-				if (object instanceof Message) {
-					Message message = (Message) object;
-					receiveMessage(message, client);
+			while (!clientServerConfig.isClosed()) {
+				Message object = clientServerConfig.receiveMessage();
+				if (object.getIsFinished()) {
+					receiveMessage(new Message(true), client);
+					break;
 				}
-				// end of stream
-				receiveMessage(new Message(true), client);
+				receiveMessage(object, client);
 			}
 		} catch (EOFException ignored) {
 
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		} finally {
-			inputStream.close();
-			outputStream.close();
-			clientSocket.close();
+			clientServerConfig.close();
 		}
-
 	}
 
 }

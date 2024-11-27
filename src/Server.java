@@ -1,14 +1,10 @@
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server extends Filter {
 	private ServerSocket serverSocket;
-	private Socket currentClientSocket;
-	private ObjectInputStream inputStream;
-	private ObjectOutputStream outputStream;
+	private ClientServerConfiguration clientServerConfig;
 
 	public Server(Pipe inPipe, Pipe outPipe, int port) throws IOException {
 		super(inPipe, outPipe);
@@ -16,78 +12,65 @@ public class Server extends Filter {
 	}
 
 	@Override
-	void filter() throws IOException, ClassNotFoundException, InterruptedException {
+	void filter() {
 		this.startServer();
 	}
 
-	private void readObjectFromClient() throws IOException, ClassNotFoundException {
+	public void startServer() {
+		System.out.println("Server started on port " + serverSocket.getLocalPort());
 		try {
-			Object obj;
 			while (true) {
-				obj = inputStream.readObject();
-				if (obj instanceof Message) {
-					Message message = (Message) obj;
-					if (message.getIsFinished()) {
-						break;
-					} else {
-						String line = message.getString();
-						outPipe.write(line);
-					}
+				Socket clientSocket = serverSocket.accept();
+				System.out.println("Connection established with: " + clientSocket.getRemoteSocketAddress());
+				clientServerConfig = new ClientServerConfiguration(clientSocket);
+
+				// multiple client support
+				new Thread(() -> handleClient(clientServerConfig)).start();
+			}
+		} catch (IOException e) {
+			throw new RuntimeException("error: ", e);
+		}
+	}
+
+	private void handleClient(ClientServerConfiguration clientServerConfig) {
+		try {
+			readObjectsFromClient(clientServerConfig);
+			sendProcessedObjectsBackToClient(clientServerConfig);
+		} finally {
+			clientServerConfig.close();
+		}
+	}
+
+	private void readObjectsFromClient(ClientServerConfiguration handler) {
+		try {
+			Message obj;
+			while ((obj = handler.receiveMessage()) != null) {
+				if (obj.getIsFinished()) {
+					break;
+				} else {
+					String line = obj.getString();
+					outPipe.write(line);
 				}
 			}
 			outPipe.close();
 		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Error reading from client: ", e);
 		}
 	}
 
-	private void sendProcessedObjectBackToClient() throws IOException, InterruptedException {
+	private void sendProcessedObjectsBackToClient(ClientServerConfiguration handler) {
 		try {
 			while (inPipe.isNotEmptyOrIsNotClosed()) {
 				while (inPipe.hasNext()) {
 					String processedLine = inPipe.read();
 					Message responseMessage = new Message(processedLine);
-					outputStream.writeObject(responseMessage);
+					handler.sendMessage(responseMessage);
 				}
 				Thread.sleep(100);
 			}
+			handler.sendMessage(new Message(true));
 		} catch (IOException | InterruptedException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private void connectServerToClientSocket() {
-		try {
-			Socket clientSocket = serverSocket.accept();
-			System.out.println("Connection established with: " + clientSocket.getRemoteSocketAddress());
-			this.currentClientSocket = clientSocket;
-			this.outputStream = new ObjectOutputStream(currentClientSocket.getOutputStream());
-			this.inputStream = new ObjectInputStream(currentClientSocket.getInputStream());
-		} catch (IOException error) {
-			System.out.println("Error connecting: " + error.getMessage());
-			error.printStackTrace();
-		}
-	}
-
-	private void closePipesAndDataStreams() {
-		try {
-			inPipe.close();
-			outputStream.close();
-			inputStream.close();
-			currentClientSocket.close();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public void startServer() throws IOException, ClassNotFoundException, InterruptedException {
-		System.out.println("Server started on port " + serverSocket.getLocalPort());
-		while (true) {
-			connectServerToClientSocket();
-			readObjectFromClient();
-			sendProcessedObjectBackToClient();
-			closePipesAndDataStreams();
-
+			throw new RuntimeException("Error sending to client: ", e);
 		}
 	}
 
