@@ -14,7 +14,7 @@ public class ClientServerConfiguration {
 		this.inputStream = new ObjectInputStream(socket.getInputStream());
 	}
 
-	public void sendMessage(Message message) throws IOException {
+	public void sendMessageObjectOutputStream(Message message) throws IOException {
 		outputStream.writeObject(message);
 		outputStream.flush();
 		if (message.getIsFinished()) {
@@ -22,11 +22,11 @@ public class ClientServerConfiguration {
 		}
 	}
 
-	public Message receiveMessage() throws IOException, ClassNotFoundException {
+	public Message receiveMessageObjectInputSteam() throws IOException, ClassNotFoundException {
 		return (Message) inputStream.readObject();
 	}
 
-	public void close() {
+	public void closeObjectStreams() {
 		try {
 			if (outputStream != null) {
 				outputStream.close();
@@ -50,7 +50,7 @@ public class ClientServerConfiguration {
 		}
 	}
 
-	public boolean isClosed() {
+	public boolean objectStreamIsClosed() {
 		return socket.isClosed();
 	}
 }

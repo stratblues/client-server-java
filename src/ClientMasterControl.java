@@ -15,12 +15,14 @@ public class ClientMasterControl implements Mediator {
 
 	public static void main(String[] args) {
 		try {
-			String[] clientOneMessages = { "Descent of Man", "The Ascent of Man", "The Old Man and The Sea" };
-			String[] clientTwoMessages = { "first little blob ", "second one to test", "i love se575!" };
+			String[] clientOneMessages = { "DESCENT OF MAN", "THE ASCENT OF MAN", "THE OLD MAN AND THE SEA" };
+			String[] clientTwoMessages = { "first little blob ", "second one to test", "i love se575!",
+					"hemingway is also pretty good." };
 
 			ClientMasterControl mediator1 = new ClientMasterControl(clientOneMessages);
 			ClientMasterControl mediator2 = new ClientMasterControl(clientTwoMessages);
 
+			// https://stackoverflow.com/questions/31416784/thread-with-lambda-expression
 			Thread clientOneThread = new Thread(() -> {
 				try {
 					mediator1.client.sendMessagesToServer();
@@ -53,7 +55,7 @@ public class ClientMasterControl implements Mediator {
 	@Override
 	public void sendMessage(Message message, Colleague colleague) {
 		try {
-			clientServerConfig.sendMessage(message);
+			clientServerConfig.sendMessageObjectOutputStream(message);
 		} catch (IOException error) {
 			throw new RuntimeException(error);
 		}
@@ -67,8 +69,8 @@ public class ClientMasterControl implements Mediator {
 
 	private void listenForServerResponses() {
 		try {
-			while (!clientServerConfig.isClosed()) {
-				Message object = clientServerConfig.receiveMessage();
+			while (!clientServerConfig.objectStreamIsClosed()) {
+				Message object = clientServerConfig.receiveMessageObjectInputSteam();
 				if (object.getIsFinished()) {
 					receiveMessage(new Message(true), client);
 					break;
@@ -80,7 +82,7 @@ public class ClientMasterControl implements Mediator {
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		} finally {
-			clientServerConfig.close();
+			clientServerConfig.closeObjectStreams();
 		}
 	}
 

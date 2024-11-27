@@ -2,7 +2,7 @@ import java.io.IOException;
 
 public class Client extends Colleague {
 
-	String[] messages;
+	private String[] messages;
 
 	public Client(Mediator mediator, String[] messages) {
 		super(mediator);

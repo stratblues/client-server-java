@@ -37,14 +37,14 @@ public class Server extends Filter {
 			readObjectsFromClient(clientServerConfig);
 			sendProcessedObjectsBackToClient(clientServerConfig);
 		} finally {
-			clientServerConfig.close();
+			clientServerConfig.closeObjectStreams();
 		}
 	}
 
 	private void readObjectsFromClient(ClientServerConfiguration handler) {
 		try {
 			Message obj;
-			while ((obj = handler.receiveMessage()) != null) {
+			while ((obj = handler.receiveMessageObjectInputSteam()) != null) {
 				if (obj.getIsFinished()) {
 					break;
 				} else {
@@ -64,11 +64,11 @@ public class Server extends Filter {
 				while (inPipe.hasNext()) {
 					String processedLine = inPipe.read();
 					Message responseMessage = new Message(processedLine);
-					handler.sendMessage(responseMessage);
+					handler.sendMessageObjectOutputStream(responseMessage);
 				}
 				Thread.sleep(100);
 			}
-			handler.sendMessage(new Message(true));
+			handler.sendMessageObjectOutputStream(new Message(true));
 		} catch (IOException | InterruptedException e) {
 			throw new RuntimeException("Error sending to client: ", e);
 		}

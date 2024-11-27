@@ -13,7 +13,7 @@ public abstract class Filter implements Runnable {
 
 	abstract void filter() throws IOException, ClassNotFoundException, InterruptedException;
 
-	public void start() throws IOException, ClassNotFoundException, InterruptedException {
+	public void start() {
 		new Thread(this).start();
 	}
 
