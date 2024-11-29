@@ -4,12 +4,12 @@ import java.net.Socket;
 
 public class ClientMasterControl implements Mediator {
 	private Client client;
-	private ClientServerConfiguration clientServerConfig;
+	private ClientServerObjectStream clientServerStream;
 
 	public ClientMasterControl(String[] messages) throws IOException {
 		Socket clientSocket = new Socket("localhost", 5000);
 		this.client = new Client(this, messages);
-		this.clientServerConfig = new ClientServerConfiguration(clientSocket);
+		this.clientServerStream = new ClientServerObjectStream(clientSocket);
 
 	}
 
@@ -55,7 +55,7 @@ public class ClientMasterControl implements Mediator {
 	@Override
 	public void sendMessage(Message message, Colleague colleague) {
 		try {
-			clientServerConfig.sendMessageObjectOutputStream(message);
+			clientServerStream.sendMessageObjectOutputStream(message);
 		} catch (IOException error) {
 			throw new RuntimeException(error);
 		}
@@ -69,8 +69,8 @@ public class ClientMasterControl implements Mediator {
 
 	private void listenForServerResponses() {
 		try {
-			while (!clientServerConfig.objectStreamIsClosed()) {
-				Message object = clientServerConfig.receiveMessageObjectInputSteam();
+			while (!clientServerStream.objectStreamIsClosed()) {
+				Message object = clientServerStream.receiveMessageObjectInputSteam();
 				if (object.getIsFinished()) {
 					receiveMessage(new Message(true), client);
 					break;
@@ -82,7 +82,7 @@ public class ClientMasterControl implements Mediator {
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		} finally {
-			clientServerConfig.closeObjectStreams();
+			clientServerStream.closeObjectStreams();
 		}
 	}
 

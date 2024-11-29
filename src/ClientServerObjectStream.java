@@ -3,12 +3,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-public class ClientServerConfiguration {
+public class ClientServerObjectStream {
 	private Socket socket;
 	private ObjectOutputStream outputStream;
 	private ObjectInputStream inputStream;
 
-	ClientServerConfiguration(Socket socket) throws IOException {
+	ClientServerObjectStream(Socket socket) throws IOException {
 		this.socket = socket;
 		this.outputStream = new ObjectOutputStream(socket.getOutputStream());
 		this.inputStream = new ObjectInputStream(socket.getInputStream());

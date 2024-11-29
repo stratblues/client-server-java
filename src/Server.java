@@ -4,7 +4,7 @@ import java.net.Socket;
 
 public class Server extends Filter {
 	private ServerSocket serverSocket;
-	private ClientServerConfiguration clientServerConfig;
+	private ClientServerObjectStream clientServerStream;
 
 	public Server(Pipe inPipe, Pipe outPipe, int port) throws IOException {
 		super(inPipe, outPipe);
@@ -22,33 +22,33 @@ public class Server extends Filter {
 			while (true) {
 				Socket clientSocket = serverSocket.accept();
 				System.out.println("Connection established with: " + clientSocket.getRemoteSocketAddress());
-				clientServerConfig = new ClientServerConfiguration(clientSocket);
+				clientServerStream = new ClientServerObjectStream(clientSocket);
 
 				// multiple client support
-				new Thread(() -> processDataFromClient(clientServerConfig)).start();
+				new Thread(() -> processDataFromClient(clientServerStream)).start();
 			}
 		} catch (IOException e) {
 			throw new RuntimeException("error: ", e);
 		}
 	}
 
-	private void processDataFromClient(ClientServerConfiguration clientServerConfig) {
+	private void processDataFromClient(ClientServerObjectStream clientServerStream) {
 		try {
-			readObjectsFromClient(clientServerConfig);
-			sendProcessedObjectsBackToClient(clientServerConfig);
+			readObjectsFromClient(clientServerStream);
+			sendProcessedObjectsBackToClient(clientServerStream);
 		} finally {
-			clientServerConfig.closeObjectStreams();
+			clientServerStream.closeObjectStreams();
 		}
 	}
 
-	private void readObjectsFromClient(ClientServerConfiguration clientServerConfig) {
+	private void readObjectsFromClient(ClientServerObjectStream clientServerStream) {
 		try {
-			Message obj;
-			while ((obj = clientServerConfig.receiveMessageObjectInputSteam()) != null) {
-				if (obj.getIsFinished()) {
+			Message messsage;
+			while ((messsage = clientServerStream.receiveMessageObjectInputSteam()) != null) {
+				if (messsage.getIsFinished()) {
 					break;
 				} else {
-					String line = obj.getString();
+					String line = messsage.getString();
 					outPipe.write(line);
 				}
 			}
@@ -58,17 +58,17 @@ public class Server extends Filter {
 		}
 	}
 
-	private void sendProcessedObjectsBackToClient(ClientServerConfiguration clientServerConfig) {
+	private void sendProcessedObjectsBackToClient(ClientServerObjectStream clientServerStream) {
 		try {
 			while (inPipe.isNotEmptyOrIsNotClosed()) {
 				while (inPipe.hasNext()) {
 					String processedLine = inPipe.read();
 					Message responseMessage = new Message(processedLine);
-					clientServerConfig.sendMessageObjectOutputStream(responseMessage);
+					clientServerStream.sendMessageObjectOutputStream(responseMessage);
 				}
 				Thread.sleep(100);
 			}
-			clientServerConfig.sendMessageObjectOutputStream(new Message(true));
+			clientServerStream.sendMessageObjectOutputStream(new Message(true));
 		} catch (IOException | InterruptedException e) {
 			throw new RuntimeException("Error sending to client: ", e);
 		}
