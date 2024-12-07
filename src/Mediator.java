@@ -1,7 +1,9 @@
 import java.io.IOException;
 
 public interface Mediator {
-	void sendMessage(Message message, Colleague colleague) throws IOException;
+	void sendOriginalClientMessageToServer(Message message, Colleague colleague) throws IOException;
 
-	void receiveMessage(Message message, Colleague colleague);
+	void receiveProcessedMessageAndPassToClient(Message message, Colleague colleague);
+
+	void listenForServerResponses(Client client);
 }

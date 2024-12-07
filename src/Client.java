@@ -11,13 +11,13 @@ public class Client extends Colleague {
 
 	public void sendMessagesToServer() throws IOException {
 		for (String line : messages) {
-			mediator.sendMessage(new Message(line), this);
+			mediator.sendOriginalClientMessageToServer(new Message(line), this);
 		}
-		mediator.sendMessage(new Message(true), this);
+		mediator.sendOriginalClientMessageToServer(new Message(true), this);
 	}
 
-	// get message back from mediator and sys out
-	public void receive(Message message) {
+	// clients get message back from mediator and sys' out
+	public void receiveProcessedMessageBackFromServer(Message message) {
 		if (!message.getIsFinished()) {
 			System.out.println(message.getString());
 		}

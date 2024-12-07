@@ -11,24 +11,25 @@ public class MediatorClient implements Mediator {
 	}
 
 	@Override
-	public void sendMessage(Message message, Colleague colleague) throws IOException {
+	public void sendOriginalClientMessageToServer(Message message, Colleague colleague) throws IOException {
 		clientServerStream.sendMessageObjectOutputStream(message);
 	}
 
 	@Override
-	public void receiveMessage(Message message, Colleague colleague) {
-		((Client) colleague).receive(message);
+	public void receiveProcessedMessageAndPassToClient(Message message, Colleague colleague) {
+		((Client) colleague).receiveProcessedMessageBackFromServer(message);
 	}
 
+	@Override
 	public void listenForServerResponses(Client client) {
 		try {
 			while (!clientServerStream.objectStreamIsClosed()) {
 				Message message = clientServerStream.receiveMessageObjectInputSteam();
 				if (message.getIsFinished()) {
-					receiveMessage(new Message(true), client);
+					receiveProcessedMessageAndPassToClient(new Message(true), client);
 					break;
 				}
-				receiveMessage(message, client);
+				receiveProcessedMessageAndPassToClient(message, client);
 			}
 		} catch (EOFException ignored) {
 
