@@ -16,7 +16,7 @@ public class Client extends Colleague {
 		mediator.sendOriginalClientMessageToServer(new Message(true), this);
 	}
 
-	// clients get message back from mediator and sys' out
+	// clients get message back from mediator and sys out
 	public void receiveProcessedMessageBackFromServer(Message message) {
 		if (!message.getIsFinished()) {
 			System.out.println(message.getString());

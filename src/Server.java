@@ -17,13 +17,12 @@ public class Server extends Filter {
 	}
 
 	public void startServer() {
-		System.out.println("Server started on port " + serverSocket.getLocalPort());
+		System.out.println("Server started on port: " + serverSocket.getLocalPort());
 		try {
 			while (true) {
 				Socket clientSocket = serverSocket.accept();
-				System.out.println("Connection established with: " + clientSocket.getRemoteSocketAddress());
+				System.out.println("Connection established: " + clientSocket.getRemoteSocketAddress());
 				clientServerStream = new ClientServerObjectStream(clientSocket);
-
 				// multiple client support
 				new Thread(() -> processDataFromClient(clientServerStream)).start();
 			}
